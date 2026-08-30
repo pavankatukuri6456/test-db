@@ -1,0 +1,78 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: db-connect-checker
+  namespace: db-connect-demo
+  labels:
+    app.kubernetes.io/name: db-connect-checker
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: db-connect-checker
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: db-connect-checker
+    spec:
+      automountServiceAccountToken: false
+      containers:
+        - name: checker
+          image: postgres:16-alpine
+          imagePullPolicy: IfNotPresent
+          command:
+            - /bin/sh
+            - -ec
+          args:
+            - |
+              while true; do
+                if psql \
+                  --host="$DB_HOST" \
+                  --port="$DB_PORT" \
+                  --username="$DB_USER" \
+                  --dbname="$DB_NAME" \
+                  --no-password \
+                  --command='SELECT 1' >/dev/null 2>&1; then
+                  printf '%s connected\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+                else
+                  printf '%s not connected\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+                fi
+                sleep "$CHECK_INTERVAL_SECONDS"
+              done
+          env:
+            - name: DB_HOST
+              value: host.docker.internal
+            - name: DB_PORT
+              value: "55433"
+            - name: DB_NAME
+              value: appdb
+            - name: CHECK_INTERVAL_SECONDS
+              value: "10"
+            - name: PGCONNECT_TIMEOUT
+              value: "3"
+            - name: DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-credentials
+                  key: username
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-credentials
+                  key: password
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              cpu: 100m
+              memory: 128Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            runAsNonRoot: true
+            runAsUser: 70
+            seccompProfile:
+              type: RuntimeDefault

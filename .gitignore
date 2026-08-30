@@ -1,0 +1,4 @@
+# Local credentials. Commit only the corresponding example files.
+secrets.yaml
+secrets/*.txt
+!secrets/*.example.txt
