@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: workload-quota
+  namespace: resource-quota-demo
+spec:
+  hard:
+    pods: "5"
+    requests.cpu: "50m"
+    requests.memory: "32Mi"
+    limits.cpu: "100m"
+    limits.memory: "64Mi"
